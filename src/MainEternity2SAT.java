@@ -10,6 +10,10 @@ public class MainEternity2SAT{
 	public static Random r = new Random();
 	
 	public static void main(String[] args) throws Exception{
+		String solver_path = "/home/jostie/tools/cryptominisat/build.unchanged/cryptominisat4.sh";
+		String input_file = "/home/jostie/Desktop/eternity2.cnf";
+		String output_file = "/home/jostie/Desktop/solution.cnf";
+		
 		// hash which contains position and orientation of already known tiles
 		HashMap<String,int[]> known = new HashMap<String,int[]>();
 		known.put("135", new int[]{138,1});	// this is already known from the game
@@ -79,7 +83,7 @@ public class MainEternity2SAT{
 				};
 		
 		// make constraints and potential compute solution
-		known = create_constraints(known, constrained_positions, null, 1);
+		known = solveEternity2(solver_path, input_file, output_file, null, known, constrained_positions, null, 1);
 		printTable(known);		
 	}
 	
@@ -160,16 +164,86 @@ public class MainEternity2SAT{
 	}
 	
 	/**
-	 * Creates constraints and potentially computes solution if a solver is provided.
+	 * Writes constraints. Starts solver. Reads solution in. Assigns solution to variables.
 	 * 
-	 * @param known Known tiles on the board: <number of tile>, {<position>, <orientation>}.
-	 * @param constrained_positions: which field positions are used for the constraints.
+	 * @param solver_path Full path to SAT-solver binary.
+	 * @param input_file Full path where to generate constraints file.
+	 * @param output_file Full path where to write solution file.
 	 * @param seed Some seed for e.g. cryptominisat.
-	 * @param verbose if 0 then no output, if greater 0 output.
-	 * @return HashMap with solution.
+	 * @param variables The variables of the problem.
+	 * @param constraints The constraints of the problem.
+	 * @param verbose If -1 then no output, if greater -1 then output.
+	 * @return True if satisfiable, false otherwise.
 	 * @throws Exception
 	 */
-	public static HashMap<String,int[]> create_constraints(HashMap<String,int[]> known, String[] constrained_positions, Integer seed, int verbose) throws Exception{
+	public static boolean solveWriteComputeRead(String solver_path, String input_file, String output_file, Integer seed, VariablesContainer variables, StringBuffer constraints, int verbose) throws Exception{
+		// solve constraints
+		int seed_ = r.nextInt();
+		if (seed != null)
+			seed_ = seed.intValue();
+		
+		// this call is for execting the solver
+		SATsolver ss = new SATsolver(variables, solver_path, input_file, output_file, seed_);
+		
+		if (verbose > -1)
+			System.out.print("executing " + ss.getCmd() + " ... ");
+		long start_time = System.currentTimeMillis();
+		
+		String status = ss.execute(constraints, verbose > 0);
+		//String status = ss.execute2(constraints, verbose > 0);
+		
+		long stop_time = System.currentTimeMillis();
+		
+		if (verbose > -1)
+			System.out.println("finished (" + (stop_time - start_time) + " ms)");
+		
+		if (status.equals("UNSATISFIABLE"))
+			return false;
+		
+		return true;
+	}
+	
+	/**
+	 * Writes constraints. Reads some externally computed solution in. Assigns solution to variables.
+	 * 
+	 * @param output_file Full path where to find solution file.
+	 * @param seed Some seed for e.g. cryptominisat.
+	 * @param variables The variables of the problem.
+	 * @param constraints The constraints of the problem.
+	 * @param verbose If -1 then no output, if greater -1 then output.
+	 * @throws Exception
+	 */
+	public static void solveWriteRead(String output_file, VariablesContainer variables, StringBuffer constraints, int verbose) throws Exception{
+		SATsolver ss = new SATsolver(variables, null, null, output_file, 0);
+		
+		if (verbose > -1)
+			System.out.print("executing " + ss.getCmd() + " ... ");
+		long start_time = System.currentTimeMillis();
+		
+		// this call is a dummy
+		ss.execute2(constraints, verbose > 0);
+		
+		long stop_time = System.currentTimeMillis();
+		
+		if (verbose > -1)
+			System.out.println("finished (" + (stop_time - start_time) + " ms)");
+	}
+	
+	/**
+	 * Creates constraints and potentially computes solution if a solver is provided.
+	 * 
+	 * @param solver_path Full path to SAT-solver binary.
+	 * @param input_file Full path where to generate constraints file.
+	 * @param output_file Full path where to write solution file.
+	 * @param solution_file Full path to solution file (if available).
+	 * @param known HashMap of known tiles on the board: <number of tile as string>, new int[]{<position>, <orientation>}
+	 * @param constrained_positions Which field positions are used for the constraints.
+	 * @param seed Some seed for e.g. cryptominisat.
+	 * @param verbose If -1 then no output, if greater -1 then output.
+	 * @return
+	 * @throws Exception
+	 */
+	public static HashMap<String,int[]> solveEternity2(String solver_path, String input_file, String output_file, String solution_file, HashMap<String,int[]> known, String[] constrained_positions, Integer seed, int verbose) throws Exception{
 		HashMap<String,String> hm = new HashMap<String,String>();
 		putIntoHash(hm, constrained_positions);						// make more convenient hash from list of constrained positions
 		
@@ -604,36 +678,11 @@ public class MainEternity2SAT{
 		if (verbose > -1)
 			System.out.println("finished (" + (stop_time2 - stop_time) + " ms)");
 		
-		// solve constraints
-		//String solver_path = "/home/jostie/tools/minisat/core/minisat_static";
-		//String solver_path = "/home/jostie/workspace/SATlotyping/satsolver/minisat/simp/minisat_static";
-		int seed_ = r.nextInt();
-		if (seed != null)
-			seed_ = seed.intValue();
-		
-		// cryptominisat wrapped by a script: 
-		String solver_path = "/home/jostie/tools/cryptominisat/build.unchanged/cryptominisat4.sh";
-		
-		// this call is for execting the solver
-		SATsolver ss = new SATsolver(variables, solver_path, "/home/jostie/Desktop/sum_test.cnf", "/home/jostie/Desktop/out", seed_);
-		
-		// this call is a dummy
-		//SATsolver ss = new SATsolver(variables, null, null, "/home/jostie/tools/cryptominisat/build/sol", seed_);
-		
-		if (verbose > -1)
-			System.out.print("executing " + ss.getCmd() + " ... ");
-		stop_time2 = System.currentTimeMillis();
-		
-		String status = ss.execute(constraints, verbose > 0);
-		//String status = ss.execute2(constraints, verbose > 0);
-		
-		long stop_time3 = System.currentTimeMillis();
-		
-		if (verbose > -1)
-			System.out.println("finished (" + (stop_time3 - stop_time2) + " ms)");
-		
-		if (status.equals("UNSATISFIABLE"))
-			return null;
+		if (solution_file == null)
+			solveWriteComputeRead(solver_path, input_file, output_file, seed, variables, constraints, verbose);
+		else
+			solveWriteRead(solution_file, variables, constraints, verbose);
+
 
 		// ######################################################################
 		//                            output result
