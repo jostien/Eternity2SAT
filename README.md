@@ -2,9 +2,9 @@ Eternity2SAT - A SAT-attempt to solve Eternity II
 -------------------------------------------------
 
 Eternity2SAT produces SAT-constraints for Eternity II. There are two variants:
-1.) A pragmatic version (Eternity2SAT), which produces constraints based on selection variables, e.g., there are 256 binary variables to define where to put each tile and the sum of these variables has to sum up to 1. This produces a constraints-file of size 890 MB, which can hardly be handled by a solver. However, size of constraints can be reduced by simplification via [cryptominisat](https://github.com/msoos/cryptominisat) using the default values for preprocessing to 180 MB (see below).
-2.) A more economic version (Eternity2SATsmall), which, e.g., codes the position a tile is put on via an 8 bit number. Each number from 0 to 255 has to be used. This produces a contraints-file of size 420 MB. The size can be reduced via cryptominsat using the default values for preprocessing to 114 MB (see below). This version is not checked for bugs in constraints.
-3.) It is very likely, that the constraints can be improved further.
+1. A pragmatic version (Eternity2SAT), which produces constraints based on selection variables, e.g., there are 256 binary variables to define where to put each tile and the sum of these variables has to sum up to 1. This produces a constraints-file of size 890 MB, which can hardly be handled by a solver. However, size of constraints can be reduced by simplification via [cryptominisat](https://github.com/msoos/cryptominisat) using the default values for preprocessing to 180 MB (see below).
+2. A more economic version (Eternity2SATsmall), which, e.g., codes the position a tile is put on via an 8 bit number. Each number from 0 to 255 has to be used. This produces a contraints-file of size 420 MB. The size can be reduced via cryptominsat using the default values for preprocessing to 114 MB (see below). This version is not checked for bugs in constraints.
+3. It is very likely, that the constraints can be improved further.
 
 Some theoretical thoughts
 -------------------------
@@ -14,36 +14,37 @@ Eternity II was designed to have as few solutions as possible. It looks on the f
 Examples
 --------
 
-1.) Run MainEternity2SAT.java, which should produces a constraints file of size around 890 MB.
-2.a) Wait until solver finishes (which is unlikely but you can try).
-2.b) Stop solver and program and keep the constraints-file.
-3.)
-3.1) Run
+1. Run MainEternity2SAT.java, which should produces a constraints file of size around 890 MB.
+2.
+ 1. Wait until solver finishes (which is unlikely but you can try).
+ 2. Stop solver and program and keep the constraints-file.
+3.
+ 1. Run
 ```
 ./cryptominisat4 --preproc 1 <path_to_constrains_file> <path_to_constraints_file>.simplified
 ```
 from within the cryptominisat4-installation directory, which rewrites and simplifies the constraints.
-3.2) This produces a smaller constraints-file of size around 180 MB and the savedstate.dat-file in the cryptominisat4-installation directory. The dat-file is necessary for mapping the variables in the simplified constraints back to the variables of the original constraints. So keep it!
-4.) Try to solve the "smaller" problem instance, e.g. with MarchSAT, which also produces intermediate solutions
+ 2. This produces a smaller constraints-file of size around 180 MB and the savedstate.dat-file in the cryptominisat4-installation directory. The dat-file is necessary for mapping the variables in the simplified constraints back to the variables of the original constraints. So keep it!
+4. Try to solve the "smaller" problem instance, e.g. with MarchSAT, which also produces intermediate solutions
 
 MarchSAT-Example for intermediate solution
 ------------------------------------------
 
-5.) Intermediate solution should look like this:
+5. Intermediate solution should look like this:
 ```
 s SATISFIABLE
 v -1 2 -3 -4 -5 -6 -7 8 ...
 ```
-6.) Change src/solutionextender.cpp in cryptominisat line 117 so that backmapping goes through for intermediate solutions.
-7.) Then call 
+6. Change src/solutionextender.cpp in cryptominisat line 117 so that backmapping goes through for intermediate solutions.
+7. Then call 
 ```
 ./cryptominisat4 --preproc 2 <simplified_solution_file> > <solution_file>.out
 ```
-8.) <solution_file>.out contains cryptominisat comments and similar stuff so it must be adapted by an helper-script
+8. <solution_file>.out contains cryptominisat comments and similar stuff so it must be adapted by an helper-script
 ```
 ./adapt.sh <solution_file> # without the ".out"!
 ```
-9.) adapt.sh creates <solution_file> which can be read in via providing <solution_file> as solution_file in solveEternity2.
+9. adapt.sh creates <solution_file> which can be read in via providing <solution_file> as solution_file in solveEternity2.
  
 
 Requirements
