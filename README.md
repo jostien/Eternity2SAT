@@ -2,14 +2,14 @@ Eternity2SAT - An SAT-attempt to solve Eternity II
 --------------------------------------------------
 
 Eternity2SAT produces SAT-constraints for Eternity II. There are two variants:
-1.) A pragmatic version (Eternity2SAT), which produces constraints based on selection variables, e.g., there are 256 binary variables to define where to put each tile and the sum of these variables has to sum up to 1. This produces a constraints-file of size 890 MB, which can hardly be handled by a solver. However, size of constraints can be reduced by simplification via cryptominisat using the default values for preprocessing to 180 MB (see below).
+1.) A pragmatic version (Eternity2SAT), which produces constraints based on selection variables, e.g., there are 256 binary variables to define where to put each tile and the sum of these variables has to sum up to 1. This produces a constraints-file of size 890 MB, which can hardly be handled by a solver. However, size of constraints can be reduced by simplification via [cryptominisat](https://github.com/msoos/cryptominisat) using the default values for preprocessing to 180 MB (see below).
 2.) A more economic version (Eternity2SATsmall), which, e.g., codes the position a tile is put on via an 8 bit number. Each number from 0 to 255 has to be used. This produces a contraints-file of size 420 MB. The size can be reduced via cryptominsat using the default values for preprocessing to 114 MB (see below). This version is not checked for bugs in constraints.
 3.) It is very likely, that the constraints can be improved further.
 
 Some theoretical thoughts
 -------------------------
 
-EternityII was designed to have as few solutions as possible. It looks on the first sight as being a kind of random generated problem. It is well known, that for randomly generated problems of large size, local search approaches like WalkSAT are more suited, provided a satisfying solution exists. Some test runs suggest, that the algebraic approach will always fail, because the number of constraints is so big, and the solver learn so much information about the problem, that memory will always be the limiting factor. Local search only needs to keep track of the constrains and variable state. Especially in the parallel case, the constraints have to be mapped to memory only once and for each thread only the variables have to be handled. For a GPU-version of WalkSAT, see [MarchSAT](https://github.com/jostien/MarchSAT). 
+Eternity II was designed to have as few solutions as possible. It looks on the first sight as being a kind of random generated problem. It is well known, that for randomly generated problems of large size, local search approaches like WalkSAT are more suited, provided a satisfying solution exists. Some test runs suggest, that the algebraic approach will always fail, because the number of constraints is so big, and the solver learn so much information about the problem, that memory will always be the limiting factor. Local search only needs to keep track of the constrains and variable state. Especially in the parallel case, the constraints have to be mapped to memory only once and for each thread only the variables have to be handled. For a GPU-version of WalkSAT, see [MarchSAT](https://github.com/jostien/MarchSAT). 
 
 Examples
 --------
