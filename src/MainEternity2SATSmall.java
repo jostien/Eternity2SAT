@@ -1,6 +1,6 @@
 /* Eternity2SAT, Copyright (c) 2010-2016 Jost Neigenfind  <jostie@gmx.de>
  * 
- * Eternity2SAT - An SAT-attempt to solve Eternity II
+ * Eternity2SAT - A SAT-attempt to solve Eternity II
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
