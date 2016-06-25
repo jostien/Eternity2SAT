@@ -57,7 +57,7 @@ MarchSAT-Example for intermediate solution
    ./adapt.sh <solution_file> # without the ".out"!
    ```
 
-5. adapt.sh creates \<solution_file\> which can be read in via providing \<solution_file\> as solution_file in method solveEternity2.
+5. adapt.sh creates the file \<solution_file\> which can be set as parameter in method solveEternity2.
  
 
 Requirements
