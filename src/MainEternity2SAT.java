@@ -302,6 +302,7 @@ public class MainEternity2SAT{
 		// for all tiles with all orientations
 		if (verbose > -1)
 			System.out.print("creating variables ... ");
+		
 		variables.add("tile", new int[]{
 				tiles.length,		// tile
 				4,					// orientation
@@ -359,6 +360,9 @@ public class MainEternity2SAT{
 		//                         create constraints
 		// ######################################################################
 		
+		if (verbose > -1)
+			System.out.print("creating constraints ... ");
+
 		// create constraints for everything what is already known
 		Iterator<String> iterator = known.keySet().iterator();
 		while (iterator.hasNext()){
@@ -424,8 +428,6 @@ public class MainEternity2SAT{
 		}
 		
 		// constraints for neighboring tiles
-		if (verbose > -1)
-			System.out.print("creating constraints ... ");
 		for (int li = 1; li < n+1; li++){
 			for (int lj = 1; lj < n+1; lj++){
 				int l   = li*(n+2) + lj;
