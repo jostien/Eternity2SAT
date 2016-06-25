@@ -21,11 +21,11 @@ How to use Eternity2SAT:
 
 1. Run MainEternity2SAT.java, which should produces a constraints file of size around 890 MB.
 
-2.
+2. Then:
    1. Wait until solver finishes (which is unlikely but you can try).
    2. Stop solver and program and keep the constraints-file.
 
-3.
+3. Then:
    1. Run
       ```
       ./cryptominisat4 --preproc 1 <path_to_constrains_file> <path_to_constraints_file>.simplified
