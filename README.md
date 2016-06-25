@@ -16,7 +16,6 @@ Eternity II was designed to have as few solutions as possible. It looks on the f
 
 Examples
 --------
-
 1. Run MainEternity2SAT.java, which should produces a constraints file of size around 890 MB.
 
 2.
