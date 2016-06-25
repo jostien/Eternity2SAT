@@ -12,7 +12,7 @@ Eternity2SAT produces SAT-constraints for Eternity II. There are two variants:
 Some theoretical thoughts
 -------------------------
 
-Eternity II was designed to have as few solutions as possible. It looks on the first sight as being a kind of random generated problem. It is well known, that for randomly generated problems of large size, local search approaches like WalkSAT are more suited, provided a satisfying solution exists. Some test runs suggest, that the algebraic approach will always fail, because the number of constraints is so big, and the solver learn so much information about the problem, that memory will always be the limiting factor. Local search only needs to keep track of the constrains and variable state. Especially in the parallel case, the constraints have to be mapped to memory only once and for each thread only the variables have to be handled. For a GPU-version of WalkSAT, see [MarchSAT](https://github.com/jostien/MarchSAT). 
+Eternity II was designed to have as few solutions as possible. It looks on the first sight as being a kind of random generated problem. It is well known, that for randomly generated problems of large size, local search approaches like WalkSAT are more suited, provided a satisfying solution exists. Some test runs suggest, that the algebraic approach will always fail, because the number of constraints is very large producing a lot of learnt information about the problem so that memory will always be the limiting factor. Local search only needs to keep track of the constrains and variable state. Especially in the parallel case, the constraints have to be mapped to memory only once and for each thread only the variables have to be handled. For a GPU-version of WalkSAT, see [MarchSAT](https://github.com/jostien/MarchSAT). 
 
 Examples
 --------
@@ -57,7 +57,7 @@ MarchSAT-Example for intermediate solution
    ./adapt.sh <solution_file> # without the ".out"!
    ```
 
-5. adapt.sh creates <solution_file> which can be read in via providing <solution_file> as solution_file in solveEternity2.
+5. adapt.sh creates \<solution_file\> which can be read in via providing \<solution_file\> as solution_file in method solveEternity2.
  
 
 Requirements
