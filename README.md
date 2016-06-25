@@ -52,7 +52,7 @@ MarchSAT-Example for intermediate solution
    ./cryptominisat4 --preproc 2 <simplified_solution_file> > <solution_file>.out
    ```
 
-4. <solution_file>.out contains cryptominisat comments and similar stuff so it must be adapted by an helper-script
+4. \<solution_file\>.out contains cryptominisat comments and similar stuff so it must be adapted by an helper-script
    ```
    ./adapt.sh <solution_file> # without the ".out"!
    ```
