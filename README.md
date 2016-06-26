@@ -3,7 +3,15 @@ Eternity2SAT - A SAT-attempt to solve Eternity II
 
 Eternity2SAT produces SAT-constraints for Eternity II. There are two variants:
 
-0. A small example of size 6x6 (MainSmallExample.java). Can be solved by any solver in a few seconds.
+0. A small example of size 6x6 (MainSmallExample.java). Can be solved by any solver in a few seconds. Tiles are encoded by strings similar to "_AH_", colors are encoded by different characters like "_" for gray (boarder) and "A" or "H" for an inner color. The first character is the north-, the second is the east-, the third is the south- and the fourth is the west-triangle of a tile. One/the solution for the example is then given by:
+  ```
+  _AH_ _DBA _CAD _FJC _BAF __CB
+  HGJ_ BCAG ADBC JDED ABJD C_JB
+  JCI_ AIBC BDAI ECFD JHEC J_IH
+  IHD_ BCAH AFEC FGAF EHCG I_FH
+  DFJ_ ADBF EGID AGBG CBDG F_EB
+  JG__ BJ_G IA_J BC_A DD_C E__D
+  ```
 
 1. A pragmatic version (Eternity2SAT), which produces constraints based on selection variables, e.g., there are 256 binary variables to define where to put each tile and the sum of these variables has to sum up to 1. This produces a constraints-file of size 890 MB, which can hardly be handled by a solver. However, size of constraints can be reduced by simplification via [cryptominisat](https://github.com/msoos/cryptominisat) using the default values for preprocessing to 180 MB (see below).
 
