@@ -14,12 +14,12 @@ Eternity2SAT produces SAT-constraints for Eternity II. There are two variants:
   ```
 For this solution the tiles are numbered as follows (see ordering of tile-strings in MainSmallExample.java):
    ```
-   \ 4  5  6  7  8  1
-   \ 9 21 22 23 24 10
+   04 05 06 07 08 01
+   09 21 22 23 24 10
    11 25 26 27 28 12
    13 29 30 31 32 14
    15 33 34 35 36 16
-    2 17 18 19 20  3
+   02 17 18 19 20 03
    ```
 
 1. A pragmatic version (Eternity2SAT), which produces constraints based on selection variables, e.g., there are 256 binary variables to define where to put each tile and the sum of these variables has to sum up to 1. This produces a constraints-file of size 890 MB, which can hardly be handled by a solver. However, size of constraints can be reduced by simplification via [cryptominisat](https://github.com/msoos/cryptominisat) using the default values for preprocessing to 180 MB (see below).
