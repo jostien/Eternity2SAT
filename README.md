@@ -14,8 +14,8 @@ Eternity2SAT produces SAT-constraints for Eternity II. There are two variants:
   ```
 For this solution the tiles are numbered as follows (see ordering of tile-strings in MainSmallExample.java):
    ```
-    4  5  6  7  8  1
-    9 21 22 23 24 10
+   \ 4  5  6  7  8  1
+   \ 9 21 22 23 24 10
    11 25 26 27 28 12
    13 29 30 31 32 14
    15 33 34 35 36 16
