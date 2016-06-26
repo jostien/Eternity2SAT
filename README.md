@@ -21,7 +21,7 @@ For this solution the tiles are numbered as follows (see ordering of tile-string
    15 33 34 35 36 16
    02 17 18 19 20 03
    ```
-For instance tile "\_AH\_" (04) needs not to be put in the left-top corner since there are four possible positions.
+For instance, tile "\_AH\_" (04) needs not to be put in the left-top corner since there are four possible positions. That is, the solution can vary.
 
 1. A pragmatic version (Eternity2SAT), which produces constraints based on selection variables, e.g., there are 256 binary variables to define where to put each tile and the sum of these variables has to sum up to 1. This produces a constraints-file of size 890 MB, which can hardly be handled by a solver. However, size of constraints can be reduced by simplification via [cryptominisat](https://github.com/msoos/cryptominisat) using the default values for preprocessing to 180 MB (see below).
 
