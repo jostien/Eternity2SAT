@@ -1,0 +1,782 @@
+/* Eternity2SAT, Copyright (c) 2010-2016 Jost Neigenfind  <jostie@gmx.de>
+ * 
+ * Eternity2SAT - A SAT-attempt to solve Eternity II
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Random;
+
+import jsatbox.miscellaneous.VariablesContainer;
+import jsatbox.parsers.SATsolver;
+
+public class MainSmallExample{
+	public static Random r = new Random();
+	
+	public static void main(String[] args) throws Exception{
+		String solver_path = "/home/jostie/tools/cryptominisat/build.unchanged/cryptominisat4.sh";
+		String input_file = "/home/jostie/Desktop/example.cnf";
+		String output_file = "/home/jostie/Desktop/solution.cnf";
+		
+		// encoding of tiles
+		String[] tiles = {
+				"__CB", "JG__",	"E__D",	"_AH_",	"_DBA",	"_CAD",
+				"_FJC", "_BAF",	"HGJ_",	"C_JB",	"JCI_",	"J_IH",
+				"IHD_",	"I_FH", "DFJ_",	"F_EB",	"BJ_G",	"IA_J",
+				"BC_A",	"DD_C",	"BCAG", "ADBC",	"JDED",	"ABJD",	
+				"AIBC",	"BDAI",	"ECFD",	"JHEC", "BCAH",	"AFEC",
+				"FGAF",	"EHCG",	"ADBF",	"EGID",	"AGBG", "CBDG"
+		};
+		
+		// hash which contains position and orientation of already known tiles
+		HashMap<String,int[]> known = new HashMap<String,int[]>();
+		// nothing given
+		
+		// which field positions to use for the constraints?
+		// here all positions are used, counted from 0 to 35 (given as the four outer rings and the rest)
+		String[] constrained_positions = new String[]{
+				 "0", "1", "2", "3", "4", "5",
+				 "6", "7", "8", "9","10","11",
+				"12","13","14","15","16","17",
+				"18","19","20","21","22","23",
+				"24","25","26","27","28","29",
+				"30","31","32","33","34","35"
+				};
+		
+		// make constraints and potential compute solution
+		known = solveEternity2(solver_path, input_file, output_file, null, tiles, known, constrained_positions, 6, null, 1);
+		printTable(known, 6);		
+	}
+	
+	/**
+	 * Prints solution.
+	 * 
+	 * @param known Known solution.
+	 */
+	public static void print(HashMap<String,int[]> known){
+		Iterator<String> iterator = known.keySet().iterator();
+		while (iterator.hasNext()){
+			String key = iterator.next();
+			int[] data = known.get(key);
+			System.out.println(key + "\t" + data[0] + "\t" + data[1]);
+		}
+	}
+	
+	/**
+	 * Prints solution in form of a board.
+	 * 
+	 * @param known Known solution.
+	 */
+	public static void printTable(HashMap<String,int[]> known, int n){
+		int[] table = new int[n*n];
+		for (int i = 0; i < table.length; i++)
+			table[i] = -1;
+		Iterator<String> iterator = known.keySet().iterator();
+		while (iterator.hasNext()){
+			String key = iterator.next();
+			int[] data = known.get(key);
+			table[(new Integer(key)).intValue()] = data[0];
+		}
+		for (int i = 0; i < table.length; i++){
+			if (i > 0 && i % n == 0)
+				System.out.println();
+			System.out.print((table[i]+1) + "\t");
+		}
+//		for (int i = 0; i < table.length - 1; i++)
+//			if (table[i] > -1)
+//				System.out.print((table[i]+1) + "\t");
+//			else
+//				System.out.print("NA" + "\t");
+//		if (table[table.length-1] > -1)
+//			System.out.println(table[table.length-1]+1);
+//		else
+//			System.out.println("NA");
+	}
+	
+	/**
+	 * Some helper method. Puts tiles into a more convenient form. Otherwise much typing for
+	 * putting constrained positions into hash.
+	 * 
+	 * @param hm 
+	 * @param indices
+	 */
+	public static void putIntoHash(HashMap<String,String> hm, String[] indices){
+		for (int i = 0; i < indices.length; i++)
+			hm.put(indices[i], indices[i]);
+	}
+	
+	/**
+	 * Corrects indices. Must think about that again. Forgot why.
+	 * 
+	 * @param l
+	 * @param n
+	 * @param n_
+	 * @return
+	 */
+	public static int correct(int l, int n, int n_){
+		int i = (int)(Math.floor(l/n_) - 1);
+		int j_= l%n_;
+		int j = j_ - 1;
+		
+		if (i < 0 || j_== 0 || j_ == 17)
+			return -1;
+		
+		return n*i + j;
+	}
+	
+	/**
+	 * Writes constraints. Starts solver. Reads solution in. Assigns solution to variables.
+	 * 
+	 * @param solver_path Full path to SAT-solver binary.
+	 * @param input_file Full path where to generate constraints file.
+	 * @param output_file Full path where to write solution file.
+	 * @param seed Some seed for e.g. cryptominisat.
+	 * @param variables The variables of the problem.
+	 * @param constraints The constraints of the problem.
+	 * @param verbose If -1 then no output, if greater -1 then output.
+	 * @return True if satisfiable, false otherwise.
+	 * @throws Exception
+	 */
+	public static boolean solveWriteComputeRead(String solver_path, String input_file, String output_file, Integer seed, VariablesContainer variables, StringBuffer constraints, int verbose) throws Exception{
+		// solve constraints
+		int seed_ = r.nextInt();
+		if (seed != null)
+			seed_ = seed.intValue();
+		
+		// this call is for execting the solver
+		SATsolver ss = new SATsolver(variables, solver_path, input_file, output_file, seed_);
+		
+		if (verbose > -1)
+			System.out.print("executing " + ss.getCmd() + " ... ");
+		long start_time = System.currentTimeMillis();
+		
+		String status = ss.execute(constraints, verbose > 0);
+		//String status = ss.execute2(constraints, verbose > 0);
+		
+		long stop_time = System.currentTimeMillis();
+		
+		if (verbose > -1)
+			System.out.println("finished (" + (stop_time - start_time) + " ms)");
+		
+		if (status.equals("UNSATISFIABLE"))
+			return false;
+		
+		return true;
+	}
+	
+	/**
+	 * Writes constraints. Reads some externally computed solution in. Assigns solution to variables.
+	 * 
+	 * @param output_file Full path where to find solution file.
+	 * @param seed Some seed for e.g. cryptominisat.
+	 * @param variables The variables of the problem.
+	 * @param constraints The constraints of the problem.
+	 * @param verbose If -1 then no output, if greater -1 then output.
+	 * @throws Exception
+	 */
+	public static void solveWriteRead(String output_file, VariablesContainer variables, StringBuffer constraints, int verbose) throws Exception{
+		SATsolver ss = new SATsolver(variables, null, null, output_file, 0);
+		
+		if (verbose > -1)
+			System.out.print("executing " + ss.getCmd() + " ... ");
+		long start_time = System.currentTimeMillis();
+		
+		// this call is a dummy
+		ss.execute2(constraints, verbose > 0);
+		
+		long stop_time = System.currentTimeMillis();
+		
+		if (verbose > -1)
+			System.out.println("finished (" + (stop_time - start_time) + " ms)");
+	}
+	
+	/**
+	 * Creates constraints and potentially computes solution if a solver is provided.
+	 * 
+	 * @param solver_path Full path to SAT-solver binary.
+	 * @param input_file Full path where to generate constraints file.
+	 * @param output_file Full path where to write solution file.
+	 * @param solution_file Full path to solution file (if available).
+	 * @param known HashMap of known tiles on the board: <number of tile as string>, new int[]{<position>, <orientation>}
+	 * @param constrained_positions Which field positions are used for the constraints.
+	 * @param seed Some seed for e.g. cryptominisat.
+	 * @param verbose If -1 then no output, if greater -1 then output.
+	 * @return
+	 * @throws Exception
+	 */
+	public static HashMap<String,int[]> solveEternity2(String solver_path, String input_file, String output_file, String solution_file, String[] tiles, HashMap<String,int[]> known, String[] constrained_positions, int board_size, Integer seed, int verbose) throws Exception{
+		HashMap<String,String> hm = new HashMap<String,String>();
+		putIntoHash(hm, constrained_positions);						// make more convenient hash from list of constrained positions
+		
+		StringBuffer constraints = new StringBuffer();				// keeps the constraints
+		VariablesContainer variables = new VariablesContainer();	// manages the variables
+		
+		int n = board_size;	// board size
+		
+		// get unique tile colors
+		HashMap<String, String> for_sorting = new HashMap<String, String>();
+		for (int i = 0; i < tiles.length; i++)
+			for (int j = 0; j < tiles[i].length(); j++)
+				for_sorting.put(tiles[i].charAt(j) + "", tiles[i].charAt(j) + "");
+		
+		// sort tile colors (better for understanding what is going on)
+		String[] colors = new String[for_sorting.size()];
+		for_sorting.keySet().toArray(colors);
+		Arrays.sort(colors);
+		
+		// assign index of color
+		HashMap<String, Integer> tile_colors = new HashMap<String, Integer>();
+		for (int i = 0; i < colors.length; i++)
+			tile_colors.put(colors[i], tile_colors.size());
+		
+		// output colors and corresponding index (only for debugging)
+		colors = new String[tile_colors.size()];
+		tile_colors.keySet().toArray(colors);
+		for (int i = 0; i < colors.length; i++)
+			System.out.println(colors[i] + "\t" + tile_colors.get(colors[i]));
+		
+		// ######################################################################
+		//                          create variables
+		// ######################################################################
+		
+		long start_time = System.currentTimeMillis();
+		
+		// for all tiles with all orientations
+		if (verbose > -1)
+			System.out.print("creating variables ... ");
+		
+		variables.add("tile", new int[]{
+				tiles.length,		// tile
+				4,					// orientation
+				4,					// quadrant
+				tile_colors.size() 	// color
+				});
+		
+		// for helping
+		variables.add("help", new int[]{
+				tiles.length,
+				4,
+				4,
+				tile_colors.size()
+				});
+
+		// for the chosen orientation
+		variables.add("selected_orientation", new int[]{
+				tiles.length,		// tile
+				4					// orientation
+				});
+		
+		// for the tile with chosen orientation
+		variables.add("realized_tile_orientation", new int[]{
+				tiles.length,		// tile
+				4,					// quadrant
+				tile_colors.size() 	// color
+				});
+		
+		// for chosen field
+		variables.add("selected_field", new int[]{
+				tiles.length,
+				(n+2)*(n+2)
+				});
+		
+		// for tile chosen on a field
+		variables.add("realized_tile_on_field", new int[]{
+				tiles.length,		// tile
+				(n+2)*(n+2),		// field
+				4,					// quadrant
+				tile_colors.size()	// color
+				});
+		
+		// for the chosen orientation and tiles on the board
+		variables.add("realized_tile_on_board", new int[]{
+				(n+2)*(n+2),		// field
+				4,					// quadrant
+				tile_colors.size()	// color
+				});
+		
+		long stop_time = System.currentTimeMillis();
+		if (verbose > -1)
+			System.out.println("finished (" + (stop_time - start_time) + " ms)");
+		
+		// ######################################################################
+		//                         create constraints
+		// ######################################################################
+		
+		if (verbose > -1)
+			System.out.print("creating constraints ... ");
+
+		// create constraints for everything what is already known
+		Iterator<String> iterator = known.keySet().iterator();
+		while (iterator.hasNext()){
+			String key = iterator.next();
+			int[] data = known.get(key);
+			
+			int k = (new Integer(key)).intValue();
+			int k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;
+			int i = data[0];
+			int l = data[1];
+			
+			constraints.append( variables.getEnumeration("selected_field", new int[]{i, k_}) + " 0\n");
+			constraints.append( variables.getEnumeration("selected_orientation", new int[]{i, l}) + " 0\n");
+			
+			//System.out.println(k + "\t" + k_ + "\t" + i + "\t" + l);
+		}
+
+		// the four first tiles can only be in the corners
+		for (int i = 0; i < 4; i++){
+			for (int k = 0; k < n*n; k++){
+				if (k != 0 && k != n-1 && k != n*n-n && k != n*n-1){
+					int k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;	// adapt variable to be in the middle of board
+					//System.out.println(k_);
+					constraints.append(-variables.getEnumeration("selected_field", new int[]{i, k_}) + " 0\n");
+				}
+			}
+		}
+		
+		// some tiles can only be at the borders
+		for (int i = 4; i < 4 + 4*(n-2); i++){
+			for (int k = n; k < n*n - n; k++){
+				if (!(k%n == 0 || k%n == n-1)){
+					int k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;	// adapt variable to be in the middle of board
+					//System.out.println(k_);
+					constraints.append(-variables.getEnumeration("selected_field", new int[]{i, k_}) + " 0\n");
+				}
+			}
+		}
+		
+		// some tiles can only be in the inside
+		for (int i = 4 + 4*(n-2); i < n*n; i++){
+			for (int k = 0; k < n; k++){
+				int k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;	// adapt variable to be in the middle of board
+				constraints.append(-variables.getEnumeration("selected_field", new int[]{i, k_}) + " 0\n");
+			}
+			for (int k = n*(n-1); k < n*n; k++){
+				int k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;	// adapt variable to be in the middle of board
+				constraints.append(-variables.getEnumeration("selected_field", new int[]{i, k_}) + " 0\n");
+			}
+			for (int k__ = 1; k__ < n-1; k__++){
+				int k = k__*n;
+				int k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;	// adapt variable to be in the middle of board
+				constraints.append(-variables.getEnumeration("selected_field", new int[]{i, k_}) + " 0\n");
+				
+				k = k__*n + n - 1;
+				k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;		// adapt variable to be in the middle of board
+				constraints.append(-variables.getEnumeration("selected_field", new int[]{i, k_}) + " 0\n");
+			}
+		}
+		
+		// constraints for neighboring tiles
+		for (int li = 1; li < n+1; li++){
+			for (int lj = 1; lj < n+1; lj++){
+				int l   = li*(n+2) + lj;
+				int l_  = correct(l,n,n+2);
+				int l__ = (int)(Math.floor(l_/n) + 1)*(n+2) + l_%n + 1;	// adapt variable to be in the middle of board
+
+				System.out.println(l + "\t<=>\t" + l_ + "\t<=>\t" + l__);
+				if (hm.containsKey(l_ + "")){
+				//System.out.println("jetzt");
+
+				for (int j = 0; j < tile_colors.size(); j++){
+					// first quadrant
+					constraints.append(
+							-variables.getEnumeration("realized_tile_on_board", new int[]{l  ,0,j}) + " " +
+							 variables.getEnumeration("realized_tile_on_board", new int[]{l-(n+2),2,j}) + " 0\n"
+							);	
+					constraints.append(
+							 variables.getEnumeration("realized_tile_on_board", new int[]{l  ,0,j}) + " " +
+							-variables.getEnumeration("realized_tile_on_board", new int[]{l-(n+2),2,j}) + " 0\n"
+							);
+					// second quadrant
+					constraints.append(
+							-variables.getEnumeration("realized_tile_on_board", new int[]{l  ,1,j}) + " " +
+							 variables.getEnumeration("realized_tile_on_board", new int[]{l+1,3,j}) + " 0\n"
+							);	
+					constraints.append(
+							 variables.getEnumeration("realized_tile_on_board", new int[]{l  ,1,j}) + " " +
+							-variables.getEnumeration("realized_tile_on_board", new int[]{l+1,3,j}) + " 0\n"
+							);
+					// third quadrant
+					constraints.append(
+							-variables.getEnumeration("realized_tile_on_board", new int[]{l  ,2,j}) + " " +
+							 variables.getEnumeration("realized_tile_on_board", new int[]{l+(n+2),0,j}) + " 0\n"
+							);	
+					constraints.append(
+							 variables.getEnumeration("realized_tile_on_board", new int[]{l  ,2,j}) + " " +
+							-variables.getEnumeration("realized_tile_on_board", new int[]{l+(n+2),0,j}) + " 0\n"
+							);
+					// fourth quadrant
+					constraints.append(
+							-variables.getEnumeration("realized_tile_on_board", new int[]{l  ,3,j}) + " " +
+							 variables.getEnumeration("realized_tile_on_board", new int[]{l-1,1,j}) + " 0\n"
+							);	
+					constraints.append(
+							 variables.getEnumeration("realized_tile_on_board", new int[]{l  ,3,j}) + " " +
+							-variables.getEnumeration("realized_tile_on_board", new int[]{l-1,1,j}) + " 0\n"
+							);
+				}
+				}
+			}
+		}
+		
+		// hard coded borders
+		int index = tile_colors.get("_");
+		// horizontal first border
+		for (int i = 1; i <= (n+2)-2; i++){
+			for (int j = 0; j < 4; j++){
+				for (int k = 0; k < tile_colors.size(); k++){
+					int sign = -1;
+					if (k == index)
+						sign = 1;
+					constraints.append(
+							sign*variables.getEnumeration("realized_tile_on_board", new int[]{i,j,k}) + " 0\n"
+							);
+				}
+			}
+		}
+		// horizontal second border
+		for (int i = (n+2)*(n+2-1) + 1; i <= (n+2)*(n+2)-2; i++){
+			for (int j = 0; j < 4; j++){
+				for (int k = 0; k < tile_colors.size(); k++){
+					int sign = -1;
+					if (k == index)
+						sign = 1;
+					constraints.append(
+							sign*variables.getEnumeration("realized_tile_on_board", new int[]{i,j,k}) + " 0\n"
+							);
+				}
+			}
+		}
+		// vertical first border
+		for (int i = 1; i <= (n+2)-2; i++){
+			int i_ = (n+2)*i;
+			for (int j = 0; j < 4; j++){
+				for (int k = 0; k < tile_colors.size(); k++){
+					int sign = -1;
+					if (k == index)
+						sign = 1;
+					constraints.append(
+							sign*variables.getEnumeration("realized_tile_on_board", new int[]{i_,j,k}) + " 0\n"
+							);
+				}
+			}
+		}
+		// vertical second border
+		for (int i = 2; i <= (n+2)-1; i++){
+			int i_ = (n+2)*i - 1;
+			for (int j = 0; j < 4; j++){
+				for (int k = 0; k < tile_colors.size(); k++){
+					int sign = -1;
+					if (k == index)
+						sign = 1;
+					constraints.append(
+							sign*variables.getEnumeration("realized_tile_on_board", new int[]{i_,j,k}) + " 0\n"
+							);
+				}
+			}
+		}		
+
+		// copy selected field to realized_tile_on_field
+		for (int i = 0; i < tiles.length; i++){						// tile
+			for (int k = 0; k < n*n; k++){							// field
+				for (int j = 0; j < 4; j++){						// quadrant
+					for (int l = 0; l < tile_colors.size(); l++){	// color
+						int k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;	// adapt variable to be in the middle of board
+						constraints.append(
+								-variables.getEnumeration("selected_field", new int[]{i, k_}) + " " +
+								-variables.getEnumeration("realized_tile_orientation" , new int[]{i, j, l}) + " " +
+								 variables.getEnumeration("realized_tile_on_field"    , new int[]{i, k_, j, l}) + " 0\n"
+								 );
+						constraints.append(
+								 variables.getEnumeration("selected_field", new int[]{i, k_}) + " " +
+								-variables.getEnumeration("realized_tile_on_field"    , new int[]{i, k_, j, l}) + " 0\n"
+								);
+						constraints.append(
+								 variables.getEnumeration("realized_tile_orientation", new int[]{i, j, l}) + " " +
+								-variables.getEnumeration("realized_tile_on_field"   , new int[]{i, k_, j, l}) + " 0\n"
+								);
+					}
+				}
+			}
+		}
+		
+		// copy realized_tile_on_fields to realized fields
+		for (int l = 0; l < (n+2)*(n+2); l++){					// field
+			for (int j = 0; j < 4; j++){						// quadrant
+				for (int k = 0; k < tile_colors.size(); k ++){	// color
+					for (int i = 0; i < tiles.length; i++){		// tile
+						constraints.append(
+								-variables.getEnumeration("realized_tile_on_field", new int[]{i, l, j, k}) + " " +
+								 variables.getEnumeration("realized_tile_on_board", new int[]{l, j, k}) + " 0\n"
+								);
+					}
+					String ret = "";
+					for (int i = 0; i < tiles.length; i++)		// tile
+						ret = ret + variables.getEnumeration("realized_tile_on_field", new int[]{i, l, j, k}) + " ";
+					ret = ret + -variables.getEnumeration("realized_tile_on_board", new int[]{l, j, k}) + " 0\n";
+					constraints.append(ret);
+				}
+			}
+		}
+		
+		// select exactly one field each
+		for (int i = 0; i < tiles.length; i++){
+			String ret = "";
+			for (int j = 0; j < n*n; j++){
+				int j_ = (int)(Math.floor(j/n) + 1)*(n+2) + j%n + 1;	// adapt variable to be in the middle of board
+				for (int k = j + 1; k < n*n; k++){
+					int k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;	// adapt variable to be in the middle of board
+					constraints.append(-variables.getEnumeration("selected_field", new int[]{i,j_}) + " " + -variables.getEnumeration("selected_field", new int[]{i,k_}) + " 0\n");
+				}
+				ret = ret + variables.getEnumeration("selected_field", new int[]{i,j_}) + " ";
+			}
+			constraints.append(ret + "0\n");
+		}
+		
+		// each field must be selected once
+		for (int k = 0; k < n*n; k++){
+			int k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;	// adapt variable to be in the middle of board
+			String ret = "";
+			for (int i = 0; i < tiles.length; i++){
+				for (int j = i + 1; j < tiles.length; j++){
+					constraints.append(-variables.getEnumeration("selected_field", new int[]{i,k_}) + " " + -variables.getEnumeration("selected_field", new int[]{j,k_}) + " 0\n");
+				}
+				ret = ret + variables.getEnumeration("selected_field", new int[]{i, k_}) + " ";
+			}
+			constraints.append(ret + "0\n");
+		}
+		
+		// hardcoded tiles
+		for (int i = 0; i < tiles.length; i++){	// tile
+			for (int j = 0; j < 4; j++){		// orientation
+				for (int k = 0; k < 4; k++){	// quadrant
+					index = tile_colors.get(tiles[i].charAt(k) + "");
+					for (int l = 0; l < tile_colors.size(); l++){
+						if (index == l)
+							constraints.append( variables.getEnumeration("tile", new int[]{i, j, (k + j) % 4, l}) + " 0\n");
+						else
+							constraints.append(-variables.getEnumeration("tile", new int[]{i, j, (k + j) % 4, l}) + " 0\n");
+					}
+				}
+			}
+		}
+		
+		// each field must be selected once
+		for (int k = 0; k < tiles.length; k++){
+			String ret = "";
+			for (int i = 0; i < 4; i++){
+				for (int j = i + 1; j < 4; j++){
+					constraints.append(-variables.getEnumeration("selected_orientation", new int[]{k, i}) + " " + -variables.getEnumeration("selected_orientation", new int[]{k, j}) + " 0\n");
+				}
+				ret = ret + variables.getEnumeration("selected_orientation", new int[]{k, i}) + " ";
+			}
+			constraints.append(ret + "0\n");
+		}
+		
+		// copy selected orientation to help variable
+		for (int i = 0; i < tiles.length; i++){	// tile
+			for (int j = 0; j < 4; j++){		// orientation
+				for (int k = 0; k < 4; k++){	// quadrant
+					for (int l = 0; l < tile_colors.size(); l++){
+						constraints.append(
+								-variables.getEnumeration("selected_orientation", new int[]{i, j}) + " " +
+								-variables.getEnumeration("tile", new int[]{i, j, k, l}) + " " +
+								 variables.getEnumeration("help", new int[]{i, j, k, l}) + " 0\n"
+								 );
+						constraints.append(
+								 variables.getEnumeration("selected_orientation", new int[]{i, j}) + " " +
+								-variables.getEnumeration("help", new int[]{i, j, k, l}) + " 0\n"
+								);
+						constraints.append(
+								 variables.getEnumeration("tile", new int[]{i, j, k, l}) + " " +
+								-variables.getEnumeration("help", new int[]{i, j, k, l}) + " 0\n"
+								);
+					}
+				}
+			}
+		}
+		
+		// copy help variables to realized tile
+		for (int i = 0; i < tiles.length; i++){	// tile
+			for (int k = 0; k < 4; k++){		// quadrant
+				for (int l = 0; l < tile_colors.size(); l++){
+					for (int j = 0; j < 4; j ++){
+						constraints.append(
+								-variables.getEnumeration("help", new int[]{i, j, k, l}) + " " +
+								 variables.getEnumeration("realized_tile_orientation", new int[]{i, k, l}) + " 0\n"
+								);
+					}
+					String ret = "";
+					for (int j = 0; j < 4; j++)
+						ret = ret + variables.getEnumeration("help", new int[]{i, j, k, l}) + " ";
+					ret = ret + -variables.getEnumeration("realized_tile_orientation", new int[]{i, k, l}) + " 0\n";
+					constraints.append(ret);
+				}
+			}
+		}
+		
+		long stop_time2 = System.currentTimeMillis();
+		if (verbose > -1)
+			System.out.println("finished (" + (stop_time2 - stop_time) + " ms)");
+		
+		if (solution_file == null)
+			solveWriteComputeRead(solver_path, input_file, output_file, seed, variables, constraints, verbose);
+		else
+			solveWriteRead(solution_file, variables, constraints, verbose);
+
+
+		// ######################################################################
+		//                            output result
+		// ######################################################################
+		
+//		// print result
+//		for (int i = 0; i < tiles.length; i++){	// tile
+//			for (int j = 0; j < 4; j++){		// orientation
+//				for (int k = 0; k < 4; k++){	// quadrant
+//					for (int l = 0; l < tile_colors.size(); l++){
+//						System.out.print(variables.variableToString("tile", new int[]{i, j, k, l}) + " ");
+//					}
+//					System.out.println();
+//				}
+//				System.out.println();
+//			}
+//			System.out.println();
+//		}
+//		
+//		for (int i = 0; i < tiles.length; i++){	// tile
+//			for (int j = 0; j < 4; j++)			// orientation
+//				System.out.print(variables.variableToString("selected_orientation", new int[]{i, j}) + " ");
+//			System.out.println();
+//		}
+//		
+//		System.out.println("\n###\n");
+//		
+//		// print result
+//		for (int i = 0; i < tiles.length; i++){	// tile
+//			for (int j = 0; j < 4; j++){		// orientation
+//				for (int k = 0; k < 4; k++){	// quadrant
+//					for (int l = 0; l < tile_colors.size(); l++){
+//						System.out.print(variables.variableToString("help", new int[]{i, j, k, l}) + " ");
+//					}
+//					System.out.println();
+//				}
+//				System.out.println();
+//			}
+//			System.out.println();
+//		}
+//		
+//		System.out.println("\n###\n");
+//		
+//		for (int i = 0; i < tiles.length; i++){	// tile
+//			for (int k = 0; k < 4; k++){		// quadrant
+//				for (int l = 0; l < tile_colors.size(); l++){
+//					System.out.print(variables.variableToString("realized_tile_orientation", new int[]{i, k, l}) + " ");
+//				}
+//				System.out.println();
+//			}
+//			System.out.println();
+//		}
+//		
+//		System.out.println("\n###\n");
+//		
+//		for (int i = 0; i < tiles.length; i++){
+//			for (int j = 0; j < (n+2)*(n+2); j++){
+//				System.out.print(variables.variableToString("selected_field", new int[]{i, j}) + " ");
+//			}
+//			System.out.println();
+//		}
+//		
+//		System.out.println("\n###\n");
+//		
+//		for (int i = 0; i < tiles.length; i++){
+//			for (int j = 0; j < 4*4; j++){
+//				for (int k = 0; k < 4; k++){
+//					for (int l = 0; l < tile_colors.size(); l++){
+//						System.out.print(variables.variableToString("realized_tile_on_field", new int[]{i, j, k, l}) + " ");
+//					}
+//					System.out.println();
+//				}
+//				System.out.println();
+//			}
+//			System.out.println();
+//		}
+//		
+//		System.out.println("\n###\n");
+//		
+//		for (int l = 0; l < 4*4; l++){							// field
+//			for (int k = 0; k < 4; k++){						// quadrant
+//				for (int j = 0; j < tile_colors.size(); j++){	// color
+//					System.out.print(variables.variableToString("realized_tile_on_board", new int[]{l, k, j}) + " ");
+//				}
+//				System.out.println();
+//			}
+//			System.out.println();
+//		}
+//		
+//		System.out.println("\n###\n");
+//		
+/*		for (int li = 0; li < (n+2); li++){							// board (vertical)
+			for (int k = 0; k < 4; k++){						// quadrant
+				for (int lj = 0; lj < (n+2); lj++){					// board (horizontal)
+					int l = li*(n+2) + lj;
+					for (int j = 0; j < tile_colors.size(); j++){	// color						
+						System.out.print(variables.variableToString("realized_tile_on_board", new int[]{l, k, j}) + " ");
+					}
+					System.out.print("\t");
+				}
+				System.out.println();
+			}
+			System.out.println();
+		}
+		System.out.println();
+*/		
+		HashMap<String, int[]> ret = new HashMap<String, int[]>();
+		iterator = known.keySet().iterator();
+		while (iterator.hasNext()){
+			String key = iterator.next();
+			int[] data = known.get(key);
+			ret.put(key, data);
+		}
+		
+		// each field must be selected once
+		//System.out.println("board\ttile");
+		for (int k = 0; k < n*n; k++){
+			if (hm.containsKey(k + "")){
+				// which field
+				int[] data = new int[2];
+				String key = k +"";
+				int k_ = (int)(Math.floor(k/n) + 1)*(n+2) + k%n + 1;	// adapt variable to be in the middle of board
+				//System.out.print((k+1) + ":\t");
+				for (int i = 0; i < tiles.length; i++){
+					if (variables.getEvaluatedId("selected_field", new int[]{i, k_}) > 0){
+						data[0] = i;	// which tile
+						//System.out.print((i+1) + "\t");
+
+						for (int l = 0; l < 4; l++)
+							if (variables.getEvaluatedId("selected_orientation", new int[]{i, l}) > 0){
+								data[1] = l;	// which orientation
+								//System.out.println((l+1));
+							}
+					}
+				}
+				ret.put(key, data);
+			}
+		}
+		
+		return ret;
+	}
+}
