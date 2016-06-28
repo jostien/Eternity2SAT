@@ -25,7 +25,7 @@ For instance, tile "\_AH\_" (04) needs not to be put in the left-top corner sinc
 
 1. A pragmatic version (Eternity2SAT), which produces constraints based on selection variables, e.g., there are 256 binary variables to define where to put each tile and the sum of these variables has to sum up to 1. This produces a constraints-file of size 890 MB, which can hardly be handled by a solver. However, size of constraints can be reduced by simplification via [cryptominisat](https://github.com/msoos/cryptominisat) using the default values for preprocessing to 180 MB (see below).
 
-2. A more economic version (Eternity2SATsmall), which, e.g., codes the position a tile is put on via an 8 bit number. Each number from 0 to 255 has to be used. This produces a contraints-file of size 420 MB. The size can be reduced via cryptominsat using the default values for preprocessing to 114 MB (see below). This version is not checked for bugs in constraints.
+2. A more economic version (Eternity2SATsmall), which, e.g., codes the position a tile is put on via an 8 bit number. Each number from 0 to 255 has to be used. This produces a contraints-file of size 420 MB. The size can be reduced via cryptominsat using the default values for preprocessing to 114 MB (see below). This version is not checked for bugs in constraints. These constraints are not correct yet, since they do NOT work on the 6x6 test example!!!
 
 3. It is very likely, that the constraints can be improved further.
 
